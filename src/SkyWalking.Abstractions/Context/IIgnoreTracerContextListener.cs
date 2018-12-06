@@ -21,5 +21,7 @@ namespace SkyWalking.Context
     public interface IIgnoreTracerContextListener
     {
         void AfterFinish(ITracerContext tracerContext);
+
+        void AfterFinish(IConcurrentTraceContext tracerContext);
     }
 }

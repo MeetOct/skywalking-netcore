@@ -16,12 +16,14 @@
  *
  */
 
-using System;
-using System.Net.Http;
 using SkyWalking.Components;
 using SkyWalking.Context;
 using SkyWalking.Context.Tag;
 using SkyWalking.Context.Trace;
+using System;
+using System.Diagnostics;
+using System.Net.Http;
+using System.Threading.Tasks;
 
 namespace SkyWalking.Diagnostics.HttpClient
 {
@@ -36,12 +38,12 @@ namespace SkyWalking.Diagnostics.HttpClient
             _contextCarrierFactory = contextCarrierFactory;
         }
 
-        [DiagnosticName("System.Net.Http.Request")]
+        [DiagnosticName("System.Net.Http.HttpRequestOut.Start")]
         public void HttpRequest([Property(Name = "Request")] HttpRequestMessage request)
         {
             var contextCarrier = _contextCarrierFactory.Create();
             var peer = $"{request.RequestUri.Host}:{request.RequestUri.Port}";
-            var span = ContextManager.CreateExitSpan(request.RequestUri.ToString(), contextCarrier, peer);
+            var span = ConcurrentContextManager.CreateExitSpan(request.RequestUri.ToString(), contextCarrier, peer,Activity.Current.Id);
             Tags.Url.Set(span, request.RequestUri.ToString());
             span.AsHttp();
             span.SetComponent(ComponentsDefine.HttpClient);
@@ -50,10 +52,10 @@ namespace SkyWalking.Diagnostics.HttpClient
                 request.Headers.Add(item.HeadKey, item.HeadValue);
         }
 
-        [DiagnosticName("System.Net.Http.Response")]
-        public void HttpResponse([Property(Name = "Response")] HttpResponseMessage response)
+        [DiagnosticName("System.Net.Http.HttpRequestOut.Stop")]
+        public void HttpResponse([Property(Name = "Response")] HttpResponseMessage response,[Property(Name = "RequestTaskStatus")]TaskStatus  taskStatus)
         {
-            var span = ContextManager.ActiveSpan;
+            var span = ConcurrentContextManager.ActiveSpan(Activity.Current.Id);
             if (span != null && response != null)
             {
                 Tags.StatusCode.Set(span, response.StatusCode.ToString());
@@ -66,7 +68,7 @@ namespace SkyWalking.Diagnostics.HttpClient
         public void HttpException([Property(Name = "Request")] HttpRequestMessage request,
             [Property(Name = "Exception")] Exception ex)
         {
-            var span = ContextManager.ActiveSpan;
+            var span = ConcurrentContextManager.ActiveSpan(Activity.Current.Id);
             if (span != null && span.IsExit)
             {
                 span.ErrorOccurred();

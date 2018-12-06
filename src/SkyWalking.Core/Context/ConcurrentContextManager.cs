@@ -16,9 +16,9 @@
  *
  */
 
+using SkyWalking.Context.Trace;
 using System.Collections.Generic;
 using System.Threading;
-using SkyWalking.Context.Trace;
 
 namespace SkyWalking.Context
 {
@@ -27,18 +27,18 @@ namespace SkyWalking.Context
     /// We also provide the CONTEXT propagation based on ThreadLocal mechanism.
     /// Meaning, each segment also related to singe thread.
     /// </summary>
-    public class ContextManager : ITracingContextListener, IIgnoreTracerContextListener
+    public class ConcurrentContextManager : ITracingContextListener, IIgnoreTracerContextListener
     {
-        static ContextManager()
+        static ConcurrentContextManager()
         {
             var manager = new ContextManager();
             TracingContext.ListenerManager.Add(manager);
             IgnoredTracerContext.ListenerManager.Add(manager);
         }
 
-        private static readonly AsyncLocal<ITracerContext> _context = new AsyncLocal<ITracerContext>();
+        private static readonly AsyncLocal<IConcurrentTraceContext> _context = new AsyncLocal<IConcurrentTraceContext>();
 
-        private static ITracerContext GetOrCreateContext(string operationName, bool forceSampling)
+        private static IConcurrentTraceContext GetOrCreateContext(string operationName, bool forceSampling)
         {
             var context = _context.Value;
             if (context == null)
@@ -46,7 +46,7 @@ namespace SkyWalking.Context
                 if (string.IsNullOrEmpty(operationName))
                 {
                     // logger.debug("No operation name, ignore this trace.");
-                    _context.Value = new IgnoredTracerContext();
+                    _context.Value = new ConcurrentIgnoredTraceContext();
                 }
                 else
                 {
@@ -62,17 +62,17 @@ namespace SkyWalking.Context
                             var sampler = DefaultSampler.Instance;
                             if (forceSampling || sampler.Sampled())
                             {
-                                _context.Value = new TracingContext();
+                                _context.Value = new ConcurrentTraceContext();
                             }
                             else
                             {
-                                _context.Value = new IgnoredTracerContext();
+                                _context.Value = new ConcurrentIgnoredTraceContext();
                             }
 //                        }
                     }
                     else
                     {
-                        _context.Value = new IgnoredTracerContext();
+                        _context.Value = new ConcurrentIgnoredTraceContext();
                     }
                 }
             }
@@ -80,7 +80,7 @@ namespace SkyWalking.Context
             return _context.Value;
         }
 
-        private static ITracerContext Context => _context.Value;
+        private static IConcurrentTraceContext Context => _context.Value;
 
         public static string GlobalTraceId
         {
@@ -95,81 +95,81 @@ namespace SkyWalking.Context
             }
         }
 
-        public static IContextSnapshot Capture => _context.Value?.Capture;
+        public static IContextSnapshot Capture(string activityId) => _context.Value?.Capture(activityId);
 
         public static IDictionary<string, object> ContextProperties => _context.Value?.Properties;
 
-        public static ISpan CreateEntrySpan(string operationName, IContextCarrier carrier)
+        public static ISpan CreateEntrySpan(string operationName, IContextCarrier carrier,string activityId)
         {
             var samplingService = DefaultSampler.Instance;
             if (carrier != null && carrier.IsValid)
             {
                 samplingService.ForceSampled();
                 var context = GetOrCreateContext(operationName, true);
-                var span = context.CreateEntrySpan(operationName);
-                context.Extract(carrier);
+                var span = context.CreateEntrySpan(operationName, activityId);
+                context.Extract(carrier, activityId);
                 return span;
             }
             else
             {
                 var context = GetOrCreateContext(operationName, false);
 
-                return context.CreateEntrySpan(operationName);
+                return context.CreateEntrySpan(operationName, activityId);
             }
         }
 
-        public static ISpan CreateLocalSpan(string operationName)
+        public static ISpan CreateLocalSpan(string operationName, string activityId)
         {
             var context = GetOrCreateContext(operationName, false);
-            return context.CreateLocalSpan(operationName);
+            return context.CreateLocalSpan(operationName, activityId);
         }
 
-        public static ISpan CreateExitSpan(string operationName, IContextCarrier carrier, string remotePeer)
+        public static ISpan CreateExitSpan(string operationName, IContextCarrier carrier, string remotePeer, string activityId)
         {
             var context = GetOrCreateContext(operationName, false);
-            var span = context.CreateExitSpan(operationName, remotePeer);
-            context.Inject(carrier);
+            var span = context.CreateExitSpan(operationName, remotePeer, activityId);
+            context.Inject(carrier, activityId);
             return span;
         }
 
-        public static ISpan CreateExitSpan(string operationName, string remotePeer)
+        public static ISpan CreateExitSpan(string operationName, string remotePeer, string activityId)
         {
             var context = GetOrCreateContext(operationName, false);
-            var span = context.CreateExitSpan(operationName, remotePeer);
+            var span = context.CreateExitSpan(operationName, remotePeer, activityId);
             return span;
         }
 
-        public static void Inject(IContextCarrier carrier)
+        public static void Inject(IContextCarrier carrier, string activityId)
         {
-            Context?.Inject(carrier);
+            Context?.Inject(carrier, activityId);
         }
 
-        public static void Extract(IContextCarrier carrier)
+        public static void Extract(IContextCarrier carrier, string activityId)
         {
-            Context?.Extract(carrier);
+            Context?.Extract(carrier, activityId);
         }
 
-        public static void Continued(IContextSnapshot snapshot)
+        public static void Continued(IContextSnapshot snapshot, string activityId)
         {
             if (snapshot.IsValid && !snapshot.IsFromCurrent)
             {
-                Context?.Continued(snapshot);
+                Context?.Continued(snapshot, activityId);
             }
         }
 
-        public static void StopSpan()
+        public static void StopSpan(string activityId)
         {
-            StopSpan(ActiveSpan);
+            StopSpan(ActiveSpan(activityId), activityId);
         }
 
-        public static ISpan ActiveSpan
+        public static ISpan ActiveSpan(string activityId)
         {
-            get { return Context?.ActiveSpan; }
+            return Context?.ActiveSpan(activityId);
         }
 
-        public static void StopSpan(ISpan span)
+        public static void StopSpan(ISpan span, string activityId)
         {
-            Context?.StopSpan(span);
+            Context?.StopSpan(span, activityId);
         }
 
         public void AfterFinished(ITraceSegment traceSegment)

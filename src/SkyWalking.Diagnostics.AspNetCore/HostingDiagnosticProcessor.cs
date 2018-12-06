@@ -16,8 +16,6 @@
  *
  */
 
-using System;
-using System.Collections.Generic;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.AspNetCore.Mvc.Abstractions;
@@ -27,6 +25,9 @@ using SkyWalking.Context;
 using SkyWalking.Context.Tag;
 using SkyWalking.Context.Trace;
 using SkyWalking.Diagnostics;
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
 
 namespace SkyWalking.AspNetCore.Diagnostics
 {
@@ -48,7 +49,7 @@ namespace SkyWalking.AspNetCore.Diagnostics
             var carrier = _contextCarrierFactory.Create();
             foreach (var item in carrier.Items)
                 item.HeadValue = httpContext.Request.Headers[item.HeadKey];
-            var httpRequestSpan = ContextManager.CreateEntrySpan($"{_config.ApplicationCode} {httpContext.Request.Path}", carrier);
+            var httpRequestSpan = ConcurrentContextManager.CreateEntrySpan($"{_config.ApplicationCode} {httpContext.Request.Path}", carrier, Activity.Current.Id);
             httpRequestSpan.AsHttp();
             httpRequestSpan.SetComponent(ComponentsDefine.AspNetCore);
             Tags.Url.Set(httpRequestSpan, httpContext.Request.Path);
@@ -65,7 +66,7 @@ namespace SkyWalking.AspNetCore.Diagnostics
         [DiagnosticName("Microsoft.AspNetCore.Hosting.EndRequest")]
         public void EndRequest([Property] HttpContext httpContext)
         {
-            var httpRequestSpan = ContextManager.ActiveSpan;
+            var httpRequestSpan = ConcurrentContextManager.ActiveSpan(Activity.Current.Id);
             if (httpRequestSpan == null)
             {
                 return;
@@ -84,19 +85,19 @@ namespace SkyWalking.AspNetCore.Diagnostics
                     {"event", "AspNetCore Hosting EndRequest"},
                     {"message", $"Request finished {httpContext.Response.StatusCode} {httpContext.Response.ContentType}"}
                 });
-            ContextManager.StopSpan(httpRequestSpan);
+            ConcurrentContextManager.StopSpan(httpRequestSpan, Activity.Current.Id);
         }
 
         [DiagnosticName("Microsoft.AspNetCore.Diagnostics.UnhandledException")]
         public void DiagnosticUnhandledException([Property]HttpContext httpContext, [Property]Exception exception)
         {
-            ContextManager.ActiveSpan?.ErrorOccurred()?.Log(exception);
+            ConcurrentContextManager.ActiveSpan(Activity.Current.Id)?.ErrorOccurred()?.Log(exception);
         }
 
         [DiagnosticName("Microsoft.AspNetCore.Hosting.UnhandledException")]
         public void HostingUnhandledException([Property]HttpContext httpContext, [Property]Exception exception)
         {
-            ContextManager.ActiveSpan?.ErrorOccurred()?.Log(exception);
+            ConcurrentContextManager.ActiveSpan(Activity.Current.Id)?.ErrorOccurred()?.Log(exception);
         }
         
         //[DiagnosticName("Microsoft.AspNetCore.Mvc.BeforeAction")]
