@@ -146,6 +146,7 @@ namespace SkyWalking.Context
 
             var span = new LocalSpan(_spanIdGenerator++, parentSpanId, operationName);
             span.Start();
+            _latestSpan = span;
             TryAddSpan(activityId, span);
             return span;
         }
@@ -157,6 +158,7 @@ namespace SkyWalking.Context
         {
             var parentSpanId = _latestSpan?.SpanId ?? -1;
             var exitSpan = IsLimitMechanismWorking() ? (ISpan)new NoopExitSpan(remotePeer) : new ExitSpan(_spanIdGenerator++, parentSpanId, operationName, remotePeer);
+            _latestSpan = exitSpan;
             TryAddSpan(activityId, exitSpan);
             return exitSpan.Start();
         }
@@ -315,6 +317,13 @@ namespace SkyWalking.Context
                     disposable.Dispose();
                 }
             }
+            _firstSpan = null;
+            _latestSpan = null;
+        }
+
+        private void SetFirstSpan(ISpan span)
+        {
+            _firstSpan = _firstSpan ?? span;
         }
 
         public static class ListenerManager
