@@ -12,7 +12,9 @@ namespace SkyWalking.Sample.Frontend.Controllers
         [HttpGet("/values")]
         public async Task<IEnumerable<string>> Get()
         {
-            await new HttpClient().GetAsync("http://localhost:5002/api/values");
+            var task1= new HttpClient().GetAsync("http://ocs.aihuishou.com/home/healthcheck");
+            var task2= new HttpClient().GetAsync("http://ocs.aihuishou.com/home/healthcheck");
+            await Task.WhenAll(task1, task2);
             return new string[] { "value1", "value2" };
         } 
     }
