@@ -1,0 +1,22 @@
+﻿FROM microsoft/dotnet:2.1.500-sdk
+
+WORKDIR /app
+
+RUN dotnet tool install -g SkyWalking.DotNet.CLI \
+&&  export PATH="$PATH:/root/.dotnet/tools" \
+&&  dotnet skywalking install \
+&&  /root/.dotnet/tools/dotnet-skywalking config  sample_app 192.168.5.19:11800
+
+ENV ASPNETCORE_URLS http://*:5000
+ENV ASPNETCORE_ENVIRONMENT Production
+ENV DOTNET_ADDITIONAL_DEPS /usr/local/share/dotnet/x64/additionalDeps/skywalking.agent.aspnetcore
+ENV SKYWALKING__APPLICATIONCODE sample_app
+ENV ASPNETCORE_HOSTINGSTARTUPASSEMBLIES SkyWalking.Agent.AspNetCore
+ENV LTTNG_UST_REGISTER_TIMEOUT 0
+
+RUN ln -snf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime && echo Asia/Shanghai > /etc/timezone
+
+ARG source=.
+EXPOSE 5000
+ENTRYPOINT ["dotnet", "SkyWalking.Sample.Frontend.dll"]
+COPY . /app
