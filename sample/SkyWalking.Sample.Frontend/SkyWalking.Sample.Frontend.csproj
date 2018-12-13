@@ -18,6 +18,7 @@
     <ProjectReference Include="..\..\src\SkyWalking.Agent.AspNetCore\SkyWalking.Agent.AspNetCore.csproj" />
   </ItemGroup>
   <ItemGroup>
+    <Folder Include="logs" />
     <Folder Include="logs\" />
   </ItemGroup>
 </Project>

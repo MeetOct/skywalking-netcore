@@ -61,7 +61,7 @@ namespace SkyWalking.Diagnostics.HttpClient
                 Tags.StatusCode.Set(span, response.StatusCode.ToString());
             }
 
-            ContextManager.StopSpan(span);
+            ConcurrentContextManager.StopSpan(Activity.Current.Id);
         }
 
         [DiagnosticName("System.Net.Http.Exception")]

@@ -31,8 +31,8 @@ namespace SkyWalking.Context
     {
         static ConcurrentContextManager()
         {
-            var manager = new ContextManager();
-            TracingContext.ListenerManager.Add(manager);
+            var manager = new ConcurrentContextManager();
+            ConcurrentTraceContext.ListenerManager.Add(manager);
             IgnoredTracerContext.ListenerManager.Add(manager);
         }
 

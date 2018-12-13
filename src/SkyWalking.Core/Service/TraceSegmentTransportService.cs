@@ -39,7 +39,7 @@ namespace SkyWalking.Service
             _dispatcher = dispatcher;
             _config = configAccessor.Get<TransportConfig>();
             Period = TimeSpan.FromMilliseconds(_config.Interval);
-            TracingContext.ListenerManager.Add(this);
+            ConcurrentTraceContext.ListenerManager.Add(this);
         }
 
         protected override TimeSpan DueTime { get; } = TimeSpan.FromSeconds(3);
