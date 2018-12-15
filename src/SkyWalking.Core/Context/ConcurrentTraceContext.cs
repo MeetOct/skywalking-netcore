@@ -12,8 +12,6 @@ namespace SkyWalking.Context
         private long _lastWarningTimestamp = 0;
         private readonly ISampler _sampler;
         private readonly ITraceSegment _segment;
-        private ISpan _firstSpan { get; set; }
-        private ISpan _latestSpan { get; set; }
         private readonly ConcurrentDictionary<string,ISpan> _activeSpanDic;
         private int _spanIdGenerator;
         public ConcurrentTraceContext()
@@ -26,7 +24,7 @@ namespace SkyWalking.Context
         /// <summary>
         /// Inject the context into the given carrier, only when the active span is an exit one.
         /// </summary>
-        public void Inject(IContextCarrier carrier,string activityId)
+        public void Inject(IContextCarrier carrier,string activityId, string rootId)
         {
             var span = InternalActiveSpan(activityId);
             if (!span.IsExit)
@@ -53,7 +51,7 @@ namespace SkyWalking.Context
 
             var refs = _segment.Refs;
 
-            var metaValue = GetMetaValue(refs);
+            var metaValue = GetMetaValue(refs, rootId);
 
             carrier.EntryApplicationInstanceId = metaValue.entryApplicationInstanceId;
 
@@ -66,10 +64,10 @@ namespace SkyWalking.Context
                 carrier.EntryOperationId = metaValue.operationId;
             }
 
-            var parentOperationId = _firstSpan.OperationId;
+            var parentOperationId = RootSpan(rootId).OperationId;
             if (parentOperationId == 0)
             {
-                carrier.ParentOperationName = _firstSpan.OperationName;
+                carrier.ParentOperationName = RootSpan(rootId).OperationName;
             }
             else
             {
@@ -115,20 +113,22 @@ namespace SkyWalking.Context
         /// <summary>
         /// Create an entry span
         /// </summary>
-        public ISpan CreateEntrySpan(string operationName, string activityId)
+        public ISpan CreateEntrySpan(string operationName, string activityId, string parentId)
         {
             if (!EnsureLimitMechanismWorking(activityId,out var noopSpan))
             {
                 return noopSpan;
             }
 
-            var parentSpanId = _latestSpan?.SpanId ?? -1;
+            var parentSpanId = -1;
+            if (!string.IsNullOrWhiteSpace(parentId))
+            {
+                _activeSpanDic.TryGetValue(activityId, out var parentSpan);
+                parentSpanId = parentSpan?.SpanId ?? -1;
+            }
 
             var entrySpan = new EntrySpan(_spanIdGenerator++, parentSpanId, operationName);
-
             entrySpan.Start();
-            _latestSpan = entrySpan;
-            SetFirstSpan(entrySpan);
             TryAddSpan(activityId,entrySpan);
 
             return entrySpan;
@@ -137,32 +137,42 @@ namespace SkyWalking.Context
         /// <summary>
         /// Create a local span
         /// </summary>
-        public ISpan CreateLocalSpan(string operationName, string activityId)
+        public ISpan CreateLocalSpan(string operationName, string activityId, string parentId)
         {
             if (!EnsureLimitMechanismWorking(activityId,out var noopSpan))
             {
                 return noopSpan;
             }
-            var parentSpanId = _latestSpan?.SpanId ?? -1;
+
+            var parentSpanId = -1;
+            if (!string.IsNullOrWhiteSpace(parentId))
+            {
+                _activeSpanDic.TryGetValue(activityId, out var parentSpan);
+                parentSpanId = parentSpan?.SpanId??-1;
+            }
 
             var span = new LocalSpan(_spanIdGenerator++, parentSpanId, operationName);
             span.Start();
-            _latestSpan = span;
-            SetFirstSpan(span);
             TryAddSpan(activityId, span);
+
             return span;
         }
 
         /// <summary>
         /// Create an exit span
         /// </summary>
-        public ISpan CreateExitSpan(string operationName, string remotePeer, string activityId)
+        public ISpan CreateExitSpan(string operationName, string remotePeer, string activityId, string parentId)
         {
-            var parentSpanId = _latestSpan?.SpanId ?? -1;
+            var parentSpanId = -1;
+            if (!string.IsNullOrWhiteSpace(parentId))
+            {
+                _activeSpanDic.TryGetValue(activityId, out var parentSpan);
+                parentSpanId = parentSpan?.SpanId ?? -1;
+            }
+
             var exitSpan = IsLimitMechanismWorking() ? (ISpan)new NoopExitSpan(remotePeer) : new ExitSpan(_spanIdGenerator++, parentSpanId, operationName, remotePeer);
-            _latestSpan = exitSpan;
-            SetFirstSpan(exitSpan);
             TryAddSpan(activityId, exitSpan);
+
             return exitSpan.Start();
         }
 
@@ -201,8 +211,16 @@ namespace SkyWalking.Context
         /// <summary>
         /// Capture the snapshot of current context.
         /// </summary>
-        public IContextSnapshot Capture(string activityId) => InternalCapture(activityId);
+        public IContextSnapshot Capture(string activityId,string rootId) => InternalCapture(activityId, rootId);
 
+        private ISpan RootSpan(string rootId)
+        {
+            if (!_activeSpanDic.TryGetValue(rootId, out var span))
+            {
+                throw new InvalidOperationException($"No root span. RootId:{rootId}");
+            }
+            return span;
+        }
         private ISpan InternalActiveSpan(string activityId)
         {
             if (!_activeSpanDic.TryGetValue(activityId,out var span))
@@ -212,7 +230,7 @@ namespace SkyWalking.Context
             return span;
         }
 
-        private (string operationName, int operationId, int entryApplicationInstanceId) GetMetaValue(IEnumerable<ITraceSegmentRef> refs)
+        private (string operationName, int operationId, int entryApplicationInstanceId) GetMetaValue(IEnumerable<ITraceSegmentRef> refs,string rootId)
         {
             if (refs != null && refs.Any())
             {
@@ -222,18 +240,18 @@ namespace SkyWalking.Context
             }
             else
             {
-                return (_firstSpan.OperationName, _firstSpan.OperationId, _segment.ApplicationInstanceId);
+                return (RootSpan(rootId).OperationName, RootSpan(rootId).OperationId, _segment.ApplicationInstanceId);
             }
         }
 
-        private IContextSnapshot InternalCapture(string activityId)
+        private IContextSnapshot InternalCapture(string activityId,string rootId)
         {
             var refs = _segment.Refs;
 
             var snapshot =
                 new ContextSnapshot(_segment.TraceSegmentId, InternalActiveSpan(activityId).SpanId, _segment.RelatedGlobalTraces);
 
-            var metaValue = GetMetaValue(refs);
+            var metaValue = GetMetaValue(refs, rootId);
 
             snapshot.EntryApplicationInstanceId = metaValue.entryApplicationInstanceId;
 
@@ -246,13 +264,13 @@ namespace SkyWalking.Context
                 snapshot.EntryOperationId = metaValue.operationId;
             }
 
-            if (_firstSpan.OperationId == 0)
+            if (RootSpan(rootId).OperationId == 0)
             {
-                snapshot.ParentOperationName = _firstSpan.OperationName;
+                snapshot.ParentOperationName = RootSpan(rootId).OperationName;
             }
             else
             {
-                snapshot.ParentOperationId = _firstSpan.OperationId;
+                snapshot.ParentOperationId = RootSpan(rootId).OperationId;
             }
 
             return snapshot;
@@ -320,13 +338,6 @@ namespace SkyWalking.Context
                     disposable.Dispose();
                 }
             }
-            _firstSpan = null;
-            _latestSpan = null;
-        }
-
-        private void SetFirstSpan(ISpan span)
-        {
-            _firstSpan = _firstSpan ?? span;
         }
 
         public static class ListenerManager

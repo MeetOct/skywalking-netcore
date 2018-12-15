@@ -21,7 +21,7 @@ namespace SkyWalking.Context
 
         public IDictionary<string, object> Properties { get; } = new Dictionary<string, object>();
 
-        public IContextSnapshot Capture(string activityId)
+        public IContextSnapshot Capture(string activityId, string rootId)
         {
             return null;
         }
@@ -31,20 +31,20 @@ namespace SkyWalking.Context
 
         }
 
-        public ISpan CreateEntrySpan(string operationName, string activityId)
+        public ISpan CreateEntrySpan(string operationName, string activityId, string rootId)
         {
             _spans.TryAdd(activityId,noopEntrySpan);
             return noopEntrySpan;
         }
 
-        public ISpan CreateExitSpan(string operationName, string remotePeer, string activityId)
+        public ISpan CreateExitSpan(string operationName, string remotePeer, string activityId, string rootId)
         {
             var exitSpan = new NoopExitSpan(remotePeer);
             _spans.TryAdd(activityId, exitSpan);
             return exitSpan;
         }
 
-        public ISpan CreateLocalSpan(string operationName, string activityId)
+        public ISpan CreateLocalSpan(string operationName, string activityId, string rootId)
         {
             _spans.TryAdd(activityId, noopSpan);
             return noopSpan;
@@ -59,7 +59,7 @@ namespace SkyWalking.Context
             return string.Empty;
         }
 
-        public void Inject(IContextCarrier carrier, string activityId)
+        public void Inject(IContextCarrier carrier, string activityId, string rootId)
         {
         }
 

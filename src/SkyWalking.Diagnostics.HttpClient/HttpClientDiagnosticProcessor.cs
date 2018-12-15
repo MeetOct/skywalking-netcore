@@ -43,7 +43,7 @@ namespace SkyWalking.Diagnostics.HttpClient
         {
             var contextCarrier = _contextCarrierFactory.Create();
             var peer = $"{request.RequestUri.Host}:{request.RequestUri.Port}";
-            var span = ConcurrentContextManager.CreateExitSpan(request.RequestUri.ToString(), contextCarrier, peer,Activity.Current.Id);
+            var span = ConcurrentContextManager.CreateExitSpan(request.RequestUri.ToString(), contextCarrier, peer,Activity.Current.Id, Activity.Current.RootId);
             Tags.Url.Set(span, request.RequestUri.ToString());
             span.AsHttp();
             span.SetComponent(ComponentsDefine.HttpClient);

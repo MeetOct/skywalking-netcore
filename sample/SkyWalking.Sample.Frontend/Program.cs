@@ -17,6 +17,7 @@ namespace SkyWalking.Sample.Frontend
             BuildWebHost(args).Run();
         }
 
+        //TODO:异步支持仍需要调整 Activity 利用RootId或者ParentId
         public static IWebHost BuildWebHost(string[] args) =>
             WebHost.CreateDefaultBuilder(args)
                 .UseStartup<Startup>()

@@ -95,18 +95,18 @@ namespace SkyWalking.Context
             }
         }
 
-        public static IContextSnapshot Capture(string activityId) => _context.Value?.Capture(activityId);
+        public static IContextSnapshot Capture(string activityId, string rootId) => _context.Value?.Capture(activityId, rootId);
 
         public static IDictionary<string, object> ContextProperties => _context.Value?.Properties;
 
-        public static ISpan CreateEntrySpan(string operationName, IContextCarrier carrier,string activityId)
+        public static ISpan CreateEntrySpan(string operationName, IContextCarrier carrier,string activityId, string rootId)
         {
             var samplingService = DefaultSampler.Instance;
             if (carrier != null && carrier.IsValid)
             {
                 samplingService.ForceSampled();
                 var context = GetOrCreateContext(operationName, true);
-                var span = context.CreateEntrySpan(operationName, activityId);
+                var span = context.CreateEntrySpan(operationName, activityId, rootId);
                 context.Extract(carrier, activityId);
                 return span;
             }
@@ -114,34 +114,34 @@ namespace SkyWalking.Context
             {
                 var context = GetOrCreateContext(operationName, false);
 
-                return context.CreateEntrySpan(operationName, activityId);
+                return context.CreateEntrySpan(operationName, activityId, rootId);
             }
         }
 
-        public static ISpan CreateLocalSpan(string operationName, string activityId)
+        public static ISpan CreateLocalSpan(string operationName, string activityId, string rootId)
         {
             var context = GetOrCreateContext(operationName, false);
-            return context.CreateLocalSpan(operationName, activityId);
+            return context.CreateLocalSpan(operationName, activityId, rootId);
         }
 
-        public static ISpan CreateExitSpan(string operationName, IContextCarrier carrier, string remotePeer, string activityId)
+        public static ISpan CreateExitSpan(string operationName, IContextCarrier carrier, string remotePeer, string activityId, string rootId)
         {
             var context = GetOrCreateContext(operationName, false);
-            var span = context.CreateExitSpan(operationName, remotePeer, activityId);
-            context.Inject(carrier, activityId);
+            var span = context.CreateExitSpan(operationName, remotePeer, activityId, rootId);
+            context.Inject(carrier, activityId, rootId);
             return span;
         }
 
-        public static ISpan CreateExitSpan(string operationName, string remotePeer, string activityId)
+        public static ISpan CreateExitSpan(string operationName, string remotePeer, string activityId, string rootId)
         {
             var context = GetOrCreateContext(operationName, false);
-            var span = context.CreateExitSpan(operationName, remotePeer, activityId);
+            var span = context.CreateExitSpan(operationName, remotePeer, activityId, rootId);
             return span;
         }
 
-        public static void Inject(IContextCarrier carrier, string activityId)
+        public static void Inject(IContextCarrier carrier, string activityId, string rootId)
         {
-            Context?.Inject(carrier, activityId);
+            Context?.Inject(carrier, activityId, rootId);
         }
 
         public static void Extract(IContextCarrier carrier, string activityId)

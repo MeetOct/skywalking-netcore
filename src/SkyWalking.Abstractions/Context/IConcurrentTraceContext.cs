@@ -10,7 +10,7 @@ namespace SkyWalking.Context
         /// <summary>
         /// Inject the context into the given carrier, only when the active span is an exit one.
         /// </summary>
-        void Inject(IContextCarrier carrier, string activityId);
+        void Inject(IContextCarrier carrier, string activityId, string rootId);
 
 
         /// <summary>
@@ -29,17 +29,17 @@ namespace SkyWalking.Context
         /// <summary>
         /// Create an entry span
         /// </summary>
-        ISpan CreateEntrySpan(string operationName, string activityId);
+        ISpan CreateEntrySpan(string operationName, string activityId, string parentId);
 
         /// <summary>
         /// Create a local span
         /// </summary>
-        ISpan CreateLocalSpan(string operationName, string activityId);
+        ISpan CreateLocalSpan(string operationName, string activityId,string parentId);
 
         /// <summary>
         /// Create an exit span
         /// </summary>
-        ISpan CreateExitSpan(string operationName, string remotePeer, string activityId);
+        ISpan CreateExitSpan(string operationName, string remotePeer, string activityId, string parentId);
 
         /// <summary>
         /// Stop the given span, if and only if this one is the top element of {@link #activeSpanStack}. Because the tracing
@@ -50,6 +50,6 @@ namespace SkyWalking.Context
         /// <summary>
         /// Capture the snapshot of current context.
         /// </summary>
-        IContextSnapshot Capture(string activityId);
+        IContextSnapshot Capture(string activityId, string rootId);
     }
 }
