@@ -46,10 +46,11 @@ namespace SkyWalking.AspNetCore.Diagnostics
         [DiagnosticName("Microsoft.AspNetCore.Hosting.BeginRequest")]
         public void BeginRequest([Property] HttpContext httpContext)
         {
+//            Console.WriteLine($"{Activity.Current.Id} {Activity.Current.ParentId} {Activity.Current.RootId}");
             var carrier = _contextCarrierFactory.Create();
             foreach (var item in carrier.Items)
                 item.HeadValue = httpContext.Request.Headers[item.HeadKey];
-            var httpRequestSpan = ConcurrentContextManager.CreateEntrySpan($"{_config.ApplicationCode} {httpContext.Request.Path}", carrier, Activity.Current.Id, Activity.Current.RootId);
+            var httpRequestSpan = ConcurrentContextManager.CreateEntrySpan($"{_config.ApplicationCode} {httpContext.Request.Path}", carrier, Activity.Current.Id, Activity.Current.ParentId);
             httpRequestSpan.AsHttp();
             httpRequestSpan.SetComponent(ComponentsDefine.AspNetCore);
             Tags.Url.Set(httpRequestSpan, httpContext.Request.Path);

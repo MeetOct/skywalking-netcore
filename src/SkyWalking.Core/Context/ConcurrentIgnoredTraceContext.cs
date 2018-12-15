@@ -31,13 +31,13 @@ namespace SkyWalking.Context
 
         }
 
-        public ISpan CreateEntrySpan(string operationName, string activityId, string rootId)
+        public ISpan CreateEntrySpan(string operationName, string activityId, string parentId)
         {
             _spans.TryAdd(activityId,noopEntrySpan);
             return noopEntrySpan;
         }
 
-        public ISpan CreateExitSpan(string operationName, string remotePeer, string activityId, string rootId)
+        public ISpan CreateExitSpan(string operationName, string remotePeer, string activityId, string parentId)
         {
             var exitSpan = new NoopExitSpan(remotePeer);
             _spans.TryAdd(activityId, exitSpan);

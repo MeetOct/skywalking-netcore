@@ -123,7 +123,7 @@ namespace SkyWalking.Context
             var parentSpanId = -1;
             if (!string.IsNullOrWhiteSpace(parentId))
             {
-                _activeSpanDic.TryGetValue(activityId, out var parentSpan);
+                _activeSpanDic.TryGetValue(parentId, out var parentSpan);
                 parentSpanId = parentSpan?.SpanId ?? -1;
             }
 
@@ -147,7 +147,7 @@ namespace SkyWalking.Context
             var parentSpanId = -1;
             if (!string.IsNullOrWhiteSpace(parentId))
             {
-                _activeSpanDic.TryGetValue(activityId, out var parentSpan);
+                _activeSpanDic.TryGetValue(parentId, out var parentSpan);
                 parentSpanId = parentSpan?.SpanId??-1;
             }
 
@@ -166,7 +166,7 @@ namespace SkyWalking.Context
             var parentSpanId = -1;
             if (!string.IsNullOrWhiteSpace(parentId))
             {
-                _activeSpanDic.TryGetValue(activityId, out var parentSpan);
+                _activeSpanDic.TryGetValue(parentId, out var parentSpan);
                 parentSpanId = parentSpan?.SpanId ?? -1;
             }
 

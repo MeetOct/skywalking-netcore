@@ -99,14 +99,14 @@ namespace SkyWalking.Context
 
         public static IDictionary<string, object> ContextProperties => _context.Value?.Properties;
 
-        public static ISpan CreateEntrySpan(string operationName, IContextCarrier carrier,string activityId, string rootId)
+        public static ISpan CreateEntrySpan(string operationName, IContextCarrier carrier,string activityId, string parentId)
         {
             var samplingService = DefaultSampler.Instance;
             if (carrier != null && carrier.IsValid)
             {
                 samplingService.ForceSampled();
                 var context = GetOrCreateContext(operationName, true);
-                var span = context.CreateEntrySpan(operationName, activityId, rootId);
+                var span = context.CreateEntrySpan(operationName, activityId, parentId);
                 context.Extract(carrier, activityId);
                 return span;
             }
@@ -114,28 +114,28 @@ namespace SkyWalking.Context
             {
                 var context = GetOrCreateContext(operationName, false);
 
-                return context.CreateEntrySpan(operationName, activityId, rootId);
+                return context.CreateEntrySpan(operationName, activityId, parentId);
             }
         }
 
-        public static ISpan CreateLocalSpan(string operationName, string activityId, string rootId)
+        public static ISpan CreateLocalSpan(string operationName, string activityId, string parentId)
         {
             var context = GetOrCreateContext(operationName, false);
-            return context.CreateLocalSpan(operationName, activityId, rootId);
+            return context.CreateLocalSpan(operationName, activityId, parentId);
         }
 
-        public static ISpan CreateExitSpan(string operationName, IContextCarrier carrier, string remotePeer, string activityId, string rootId)
+        public static ISpan CreateExitSpan(string operationName, IContextCarrier carrier, string remotePeer, string activityId, string parentId, string rootId)
         {
             var context = GetOrCreateContext(operationName, false);
-            var span = context.CreateExitSpan(operationName, remotePeer, activityId, rootId);
+            var span = context.CreateExitSpan(operationName, remotePeer, activityId, parentId);
             context.Inject(carrier, activityId, rootId);
             return span;
         }
 
-        public static ISpan CreateExitSpan(string operationName, string remotePeer, string activityId, string rootId)
+        public static ISpan CreateExitSpan(string operationName, string remotePeer, string activityId, string parentId)
         {
             var context = GetOrCreateContext(operationName, false);
-            var span = context.CreateExitSpan(operationName, remotePeer, activityId, rootId);
+            var span = context.CreateExitSpan(operationName, remotePeer, activityId, parentId);
             return span;
         }
 

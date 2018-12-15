@@ -24,6 +24,7 @@ using System;
 using System.Diagnostics;
 using System.Net.Http;
 using System.Threading.Tasks;
+using SkyWalking.Utils;
 
 namespace SkyWalking.Diagnostics.HttpClient
 {
@@ -41,9 +42,10 @@ namespace SkyWalking.Diagnostics.HttpClient
         [DiagnosticName("System.Net.Http.HttpRequestOut.Start")]
         public void HttpRequest([Property(Name = "Request")] HttpRequestMessage request)
         {
+//            Console.WriteLine($"{Activity.Current.Id} {Activity.Current.ParentId} {Activity.Current.RootId}");
             var contextCarrier = _contextCarrierFactory.Create();
             var peer = $"{request.RequestUri.Host}:{request.RequestUri.Port}";
-            var span = ConcurrentContextManager.CreateExitSpan(request.RequestUri.ToString(), contextCarrier, peer,Activity.Current.Id, Activity.Current.RootId);
+            var span = ConcurrentContextManager.CreateExitSpan(request.RequestUri.ToString(), contextCarrier, peer,Activity.Current.Id, Activity.Current.ParentId, Activity.Current.FormatRootId());
             Tags.Url.Set(span, request.RequestUri.ToString());
             span.AsHttp();
             span.SetComponent(ComponentsDefine.HttpClient);
