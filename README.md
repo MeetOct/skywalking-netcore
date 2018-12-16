@@ -1,3 +1,10 @@
+### Support concurrent
+
+    1. SkyWalking.Diagnostics.AspNetCore ✔
+    2. SkyWalking.Diagnostics.HttpClient ✔
+    3. Modifications to other components can be referred to above
+
+
 SkyWalking C#/.NET instrument agent
 ==========
 
