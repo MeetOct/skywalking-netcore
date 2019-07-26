@@ -28,6 +28,7 @@ using SkyWalking.Diagnostics;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Threading;
 
 namespace SkyWalking.AspNetCore.Diagnostics
 {
@@ -59,6 +60,10 @@ namespace SkyWalking.AspNetCore.Diagnostics
                 new Dictionary<string, object>
                 {
                     {"event", "AspNetCore Hosting BeginRequest"},
+                    { "currentActivityId", Activity.Current.Id},
+                    { "currentThreadId", Thread.CurrentThread.ManagedThreadId},
+                    { "Priority", Thread.CurrentThread.Priority},
+                    { "GlobalTraceId", ConcurrentContextManager.GlobalTraceId},
                     {"message", $"Request starting {httpContext.Request.Protocol} {httpContext.Request.Method} {httpContext.Request.GetDisplayUrl()}"}
                 });
             httpContext.Items[HttpContextDiagnosticStrings.SpanKey] = httpRequestSpan;

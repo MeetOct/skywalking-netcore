@@ -16,13 +16,14 @@
  *
  */
 
-using System;
-using System.Data.SqlClient;
-using System.Linq;
 using SkyWalking.Components;
 using SkyWalking.Context;
 using SkyWalking.Context.Tag;
 using SkyWalking.Context.Trace;
+using System;
+using System.Data.SqlClient;
+using System.Diagnostics;
+using System.Linq;
 
 namespace SkyWalking.Diagnostics.SqlClient
 {
@@ -40,12 +41,12 @@ namespace SkyWalking.Diagnostics.SqlClient
         [DiagnosticName(SqlClientDiagnosticStrings.SqlBeforeExecuteCommand)]
         public void BeforeExecuteCommand([Property(Name = "Command")] SqlCommand sqlCommand)
         {
-            if (ContextManager.ContextProperties.ContainsKey(TRACE_ORM))
+            if (ConcurrentContextManager.ContextProperties.ContainsKey(TRACE_ORM))
             {
                 return;
             }
             var peer = sqlCommand.Connection.DataSource;
-            var span = ContextManager.CreateExitSpan(ResolveOperationName(sqlCommand), peer);
+            var span = ConcurrentContextManager.CreateExitSpan(ResolveOperationName(sqlCommand), peer,Activity.Current.Id, Activity.Current.ParentId);
             span.SetLayer(SpanLayer.DB);
             span.SetComponent(ComponentsDefine.SqlClient);
             Tags.DbType.Set(span, "Sql");
@@ -57,21 +58,21 @@ namespace SkyWalking.Diagnostics.SqlClient
         [DiagnosticName(SqlClientDiagnosticStrings.SqlAfterExecuteCommand)]
         public void AfterExecuteCommand()
         {
-            if (ContextManager.ContextProperties.ContainsKey(TRACE_ORM))
+            if (ConcurrentContextManager.ContextProperties.ContainsKey(TRACE_ORM))
             {
                 return;
             }
-            ContextManager.StopSpan();
+            ConcurrentContextManager.StopSpan(Activity.Current.Id);
         }
 
         [DiagnosticName(SqlClientDiagnosticStrings.SqlErrorExecuteCommand)]
         public void ErrorExecuteCommand([Property(Name = "Exception")] Exception ex)
         {
-            if (ContextManager.ContextProperties.ContainsKey(TRACE_ORM))
+            if (ConcurrentContextManager.ContextProperties.ContainsKey(TRACE_ORM))
             {
                 return;
             }
-            var span = ContextManager.ActiveSpan;
+            var span = ConcurrentContextManager.ActiveSpan(Activity.Current.Id);
             span?.ErrorOccurred();
             span?.Log(ex);
             ContextManager.StopSpan(span);

@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -17,6 +18,8 @@ namespace SkyWalking.Sample.Frontend
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
+
+            services.AddDbContext<ErpDbContext>(t => t.UseMySql("server=rm-bp195d64q36x3pkt5.mysql.rds.aliyuncs.com;userid=ahs_user;pwd=1s186XMPRvB9bTY2;port=3306;database=erp;sslmode=none;"));
             services.AddMvc();
         }
 
@@ -27,7 +30,6 @@ namespace SkyWalking.Sample.Frontend
             {
                 app.UseDeveloperExceptionPage();
             }
-
             app.UseMvc(); 
         }
     }

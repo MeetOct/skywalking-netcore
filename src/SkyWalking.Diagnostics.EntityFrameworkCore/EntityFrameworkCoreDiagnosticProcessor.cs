@@ -16,15 +16,16 @@
  *
  */
 
-using System;
-using System.Data.Common;
-using System.Linq;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.EntityFrameworkCore.Storage.Internal;
 using SkyWalking.Context;
 using SkyWalking.Context.Tag;
 using SkyWalking.Context.Trace;
+using System;
+using System.Data.Common;
+using System.Diagnostics;
+using System.Linq;
 
 namespace SkyWalking.Diagnostics.EntityFrameworkCore
 {
@@ -32,7 +33,7 @@ namespace SkyWalking.Diagnostics.EntityFrameworkCore
     {
         private const string TRACE_ORM = "TRACE_ORM";
         private Func<CommandEventData, string> _operationNameResolver;
-        private readonly IEfCoreSpanFactory _efCoreSpanFactory;
+        private readonly IConcurrentEfCoreSpanFactory _efCoreSpanFactory;
 
         public string ListenerName => DbLoggerCategory.Name;
 
@@ -53,7 +54,7 @@ namespace SkyWalking.Diagnostics.EntityFrameworkCore
             set => _operationNameResolver = value ?? throw new ArgumentNullException(nameof(OperationNameResolver));
         }
 
-        public EntityFrameworkCoreTracingDiagnosticProcessor(IEfCoreSpanFactory spanFactory)
+        public EntityFrameworkCoreTracingDiagnosticProcessor(IConcurrentEfCoreSpanFactory spanFactory)
         {
             _efCoreSpanFactory = spanFactory;
         }
@@ -62,26 +63,26 @@ namespace SkyWalking.Diagnostics.EntityFrameworkCore
         public void CommandExecuting([Object] CommandEventData eventData)
         {
             var operationName = OperationNameResolver(eventData);
-            var span = _efCoreSpanFactory.Create(operationName, eventData);
+            var span = _efCoreSpanFactory.Create(Activity.Current.Id, Activity.Current.ParentId,operationName, eventData);
             span.SetLayer(SpanLayer.DB);
             Tags.DbType.Set(span, "Sql");
             Tags.DbInstance.Set(span, eventData.Command.Connection.Database);
             Tags.DbStatement.Set(span, eventData.Command.CommandText);
             Tags.DbBindVariables.Set(span, BuildParameterVariables(eventData.Command.Parameters));
-            ContextManager.ContextProperties[TRACE_ORM] = true;
+            ConcurrentContextManager.ContextProperties[TRACE_ORM] = true;
         }
 
         [DiagnosticName("Microsoft.EntityFrameworkCore.Database.Command.CommandExecuted")]
         public void CommandExecuted()
         {
-            ContextManager.StopSpan();
-            ContextManager.ContextProperties.Remove(TRACE_ORM);
+            ConcurrentContextManager.StopSpan(Activity.Current.Id);
+            ConcurrentContextManager.ContextProperties.Remove(TRACE_ORM);
         }
 
         [DiagnosticName("Microsoft.EntityFrameworkCore.Database.Command.CommandError")]
         public void CommandError([Object]CommandErrorEventData eventData)
         {
-            var span = ContextManager.ActiveSpan;
+            var span = ConcurrentContextManager.ActiveSpan(Activity.Current.Id);
             if (span == null)
             {
                 return;
@@ -92,8 +93,8 @@ namespace SkyWalking.Diagnostics.EntityFrameworkCore
                 span.Log(eventData.Exception);
             }
             span.ErrorOccurred();
-            ContextManager.StopSpan(span);
-            ContextManager.ContextProperties.Remove(TRACE_ORM);
+            ConcurrentContextManager.StopSpan(span, Activity.Current.Id);
+            ConcurrentContextManager.ContextProperties.Remove(TRACE_ORM);
         }
 
         private string BuildParameterVariables(DbParameterCollection dbParameters)
