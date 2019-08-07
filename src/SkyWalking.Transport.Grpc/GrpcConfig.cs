@@ -24,8 +24,6 @@ namespace SkyWalking.Transport.Grpc
     [Config("SkyWalking", "Transport","gRPC")]
     public class GrpcConfig
     {
-        public string Servers { get; set; }
-        
         public int ConnectTimeout { get; set; }
         
         public int Timeout { get; set; }

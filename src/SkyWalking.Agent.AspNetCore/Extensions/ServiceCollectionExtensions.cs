@@ -33,6 +33,7 @@ using SkyWalking.Logging;
 using SkyWalking.Service;
 using SkyWalking.Transport;
 using SkyWalking.Transport.Grpc;
+using SkyWalking.Transport.Grpc.DiscoveryService;
 
 namespace SkyWalking.Agent.AspNetCore
 {
@@ -66,6 +67,8 @@ namespace SkyWalking.Agent.AspNetCore
         {
             services.AddSingleton<ISkyWalkingClient, GrpcClient>();
             services.AddSingleton<ConnectionManager>();
+            services.AddSingleton<ServiceClient>();
+            services.AddSingleton<ServiceConfigLocator>();
             services.AddSingleton<IExecutionService, GrpcStateCheckService>();
             return services;
         }

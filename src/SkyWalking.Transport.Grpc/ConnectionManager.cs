@@ -17,11 +17,13 @@
  */
 
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Grpc.Core;
 using SkyWalking.Config;
 using SkyWalking.Logging;
+using SkyWalking.Transport.Grpc.DiscoveryService;
 
 namespace SkyWalking.Transport.Grpc
 {
@@ -32,6 +34,7 @@ namespace SkyWalking.Transport.Grpc
 
         private readonly ILogger _logger;
         private readonly GrpcConfig _config;
+        private readonly ServiceConfigLocator _configLocator;
 
         private volatile Channel _channel;
         private volatile ConnectionState _state;
@@ -39,8 +42,9 @@ namespace SkyWalking.Transport.Grpc
 
         public bool Ready => _channel != null && _state == ConnectionState.Connected && _channel.State == ChannelState.Ready;
 
-        public ConnectionManager(ILoggerFactory loggerFactory, IConfigAccessor configAccessor)
+        public ConnectionManager(ILoggerFactory loggerFactory, IConfigAccessor configAccessor, ServiceConfigLocator configLocator)
         {
+            _configLocator = configLocator;
             _logger = loggerFactory.CreateLogger(typeof(ConnectionManager));
             _config = configAccessor.Get<GrpcConfig>();
         }
@@ -59,7 +63,7 @@ namespace SkyWalking.Transport.Grpc
                     await ShutdownAsync();
                 }
 
-                EnsureServerAddress();
+                await EnsureServerAddress();
 
                 _channel = new Channel(_server, ChannelCredentials.Insecure);
 
@@ -119,22 +123,22 @@ namespace SkyWalking.Transport.Grpc
             return null;
         }
 
-        private void EnsureServerAddress()
+        private async Task EnsureServerAddress()
         {
-            var servers = _config.Servers.Split(',').ToArray();
-            if (servers.Length == 1)
+            List<ServiceDto> dtos= await _configLocator.GetServices();
+            if (dtos.Any() == true)
             {
-                _server = servers[0];
+                if (dtos.Count == 1)
+                {
+                    _server = dtos[0].Url;
+                    return;
+                }
+                else
+                {
+                    _server = dtos[_random.Next() % dtos.Count].Url;
+                }
                 return;
             }
-
-            if (_server != null)
-            {
-                servers = servers.Where(x => x != _server).ToArray();
-            }
-
-            var index = _random.Next() % servers.Length;
-            _server = servers[index];
         }
     }
 

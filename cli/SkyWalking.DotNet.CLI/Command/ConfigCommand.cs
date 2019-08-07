@@ -39,8 +39,9 @@ namespace SkyWalking.DotNet.CLI.Command
 
             var applicationCodeArgument = command.Argument(
                 "Application Code", "[Required]The application name in SkyWalking");
-            var gRPCServerArgument = command.Argument(
-                "gRPC collector", "[Optional]The gRPC collector address, default 'localhost:11800'");
+
+            var discoveryServiceArgument = command.Argument(
+                "discovery service", "[Optional]The discovery service address");
 
             var environmentOption = command.Option("-e|--Environment", "Follow the app's environment.Framework-defined values include Development, Staging, and Production",
                 CommandOptionType.SingleValue);
@@ -53,13 +54,13 @@ namespace SkyWalking.DotNet.CLI.Command
                     return 1;
                 }
 
-                Generate(applicationCodeArgument.Value, gRPCServerArgument.Value, environmentOption.Value());
+                Generate(applicationCodeArgument.Value, discoveryServiceArgument.Value, environmentOption.Value());
 
                 return 0;
             });
         }
 
-        private void Generate(string applicationCode, string gRPCServer, string environment)
+        private void Generate(string applicationCode,string discoveryService, string environment)
         {
             Func<string, string> configFileName = env => string.IsNullOrEmpty(env) ? "skywalking.json" : $"skywalking.{env}.json";
 
@@ -73,13 +74,17 @@ namespace SkyWalking.DotNet.CLI.Command
                 return;
             }
 
-            gRPCServer = gRPCServer ?? "localhost:11800";
-
             var gRPCConfig = new Dictionary<string, dynamic>
             {
-                {"Servers", gRPCServer},
                 {"Timeout", 2000},
                 {"ConnectTimeout", 10000}
+            };
+
+           var discoveryConfig = new Dictionary<string, dynamic>
+            {
+               { "ServiceAddress",discoveryService},
+               { "Timeout", 2000},
+               { "RefreshInterval", 30000},
             };
 
             var transportConfig = new Dictionary<string, dynamic>
@@ -87,7 +92,8 @@ namespace SkyWalking.DotNet.CLI.Command
                 {"Interval", 3000},
                 {"PendingSegmentLimit", 30000},
                 {"PendingSegmentTimeout", 1000},
-                {"gRPC", gRPCConfig}
+                {"gRPC", gRPCConfig},
+                {"DiscoveryService", discoveryConfig},
             };
 
             var loggingConfig = new Dictionary<string, dynamic>
