@@ -65,6 +65,13 @@ namespace SkyWalking.Transport.Grpc
 
                 await EnsureServerAddress();
 
+                if (string.IsNullOrWhiteSpace(_server))
+                {
+                    _logger.Information($"Not found available gRPC connection servcer");
+                    _state = ConnectionState.Failure;
+                    return;
+                }
+
                 _channel = new Channel(_server, ChannelCredentials.Insecure);
 
                 try
@@ -126,19 +133,16 @@ namespace SkyWalking.Transport.Grpc
         private async Task EnsureServerAddress()
         {
             List<ServiceDto> dtos= await _configLocator.GetServices();
-            if (dtos.Any() == true)
+            if (dtos.Any() != true)
             {
-                if (dtos.Count == 1)
-                {
-                    _server = dtos[0].Url;
-                    return;
-                }
-                else
-                {
-                    _server = dtos[_random.Next() % dtos.Count].Url;
-                }
                 return;
             }
+            if (dtos.Count == 1)
+            {
+                _server = dtos[0].Url;
+                return;
+            }
+            _server = dtos[_random.Next() % dtos.Count].Url;
         }
     }
 

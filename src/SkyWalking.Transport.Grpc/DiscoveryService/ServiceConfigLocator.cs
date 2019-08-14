@@ -60,19 +60,26 @@ namespace SkyWalking.Transport.Grpc.DiscoveryService
                 try
                 {
                     var result = await _client.GetAsync<List<string>>(address, _config.Timeout);
+                    if (result.Body?.Any() != true)
+                    {
+                        _logger.Information($"no available service config from {address}");
+                        continue;
+                    }
                     if (result.HttpStatus == HttpStatusCode.NotModified)
                     {
+                        if (_services?.Any()==true)
+                        {
+                            return;
+                        }
+                        AtomicExchange(result.Body.Select(b => new ServiceDto() { Url = b }).ToList());
                         return;
                     }
                     if (result.HttpStatus == HttpStatusCode.OK)
-                    { 
-                        if (result.Body?.Any() == true)
-                        {
-                            AtomicExchange(result.Body.Select(b=>new ServiceDto() { Url=b }).ToList());
-                            return;
-                        }
-                        _logger.Information($"no available service config from {address}");
+                    {
+                        AtomicExchange(result.Body.Select(b => new ServiceDto() { Url = b }).ToList());
+                        return;
                     }
+                    _logger.Information($"no available service config from {address}");
                     await Task.Delay(500);
                 }
                 catch (Exception ex)

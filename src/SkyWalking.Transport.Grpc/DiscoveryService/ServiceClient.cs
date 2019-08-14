@@ -28,7 +28,7 @@ namespace SkyWalking.Transport.Grpc.DiscoveryService
                 {
                     var response = await _httpClient.SendAsync(request, cts.Token);
                     var result = new ServiceResponse<T>() { HttpStatus = response.StatusCode };
-                    if (response.StatusCode == HttpStatusCode.OK)
+                    if (response.StatusCode == HttpStatusCode.OK|| response.StatusCode == HttpStatusCode.NotModified)
                     {
                         string content = await response.Content.ReadAsStringAsync();
                         result.Body = JsonConvert.DeserializeObject<T>(content);
