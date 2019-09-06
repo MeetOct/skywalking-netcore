@@ -16,13 +16,13 @@
  *
  */
 
+using SkyWalking.Config;
+using SkyWalking.Logging;
+using SkyWalking.NetworkProtocol;
 using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
-using SkyWalking.Config;
-using SkyWalking.Logging;
-using SkyWalking.NetworkProtocol;
 
 namespace SkyWalking.Transport.Grpc
 {
@@ -103,7 +103,6 @@ namespace SkyWalking.Transport.Grpc
             {
                 return;
             }
-
             var connection = _connectionManager.GetConnection();
 
             var client = new InstanceDiscoveryService.InstanceDiscoveryServiceClient(connection);
@@ -131,14 +130,16 @@ namespace SkyWalking.Transport.Grpc
                 using (var asyncClientStreamingCall = client.collect(null, null, cancellationToken))
                 {
                     foreach (var segment in request)
+                    {
                         await asyncClientStreamingCall.RequestStream.WriteAsync(TraceSegmentHelpers.Map(segment));
+                    }
                     await asyncClientStreamingCall.RequestStream.CompleteAsync();
                     await asyncClientStreamingCall.ResponseAsync;
                 }
             }
             catch (Exception ex)
             {
-                _logger.Error("Heartbeat error.", ex);
+                _logger.Error($"collect error at {DateTimeOffset.UtcNow}.", ex);
                 _connectionManager.Failure(ex);
             }
         }

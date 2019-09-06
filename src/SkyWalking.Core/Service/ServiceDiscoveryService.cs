@@ -16,14 +16,14 @@
  *
  */
 
-using System;
-using System.Diagnostics;
-using System.Threading;
-using System.Threading.Tasks;
 using SkyWalking.Config;
 using SkyWalking.Logging;
 using SkyWalking.Transport;
 using SkyWalking.Utils;
+using System;
+using System.Diagnostics;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace SkyWalking.Service
 {
@@ -110,10 +110,10 @@ namespace SkyWalking.Service
                 try
                 {
                     await SkyWalking.HeartbeatAsync(RuntimeEnvironment.ApplicationInstanceId.Value, DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(), cancellationToken);
-                    Logger.Debug($"Heartbeat at {DateTimeOffset.UtcNow}.");
                 }
                 catch (Exception e)
                 {
+                    Logger.Error($"Heartbeat error at {DateTimeOffset.UtcNow}.", e);
                     Logger.Error("Heartbeat error.", e);
                 }
             }

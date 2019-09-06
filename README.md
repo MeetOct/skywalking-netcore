@@ -8,4 +8,9 @@
     1. SkyWalking.Diagnostics.AspNetCore ✔
     2. SkyWalking.Diagnostics.HttpClient ✔
 
-### 服务发现 todo
+### 服务发现 ✔
+
+### 接入logfactory记录日志
+
+### 请求过滤
+
